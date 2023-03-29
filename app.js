@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const mineType = require("mime-types");
 var multiparty = require("multiparty");
+const { spawn } = require('child_process');
 
 users = require('./models/users');
 projects = require('./models/projects');
@@ -32,10 +33,27 @@ function imgToBase64(url) {
 }
 
 
+function getNotices() {
+	const pythonScript = spawn('python', ['./public/爬取通知.py']);
+
+	pythonScript.stdout.on('data', (data) => {
+	  console.log(`Python script output: ${data}`);
+	});
+	
+	pythonScript.stderr.on('data', (err) => {
+	  console.error(`Error occurred: ${err}`);
+	});
+	
+	pythonScript.on('close', (code) => {
+	  console.log(`Python script exited with code ${code}`);
+	});
+}
+
+
 
 //===============链接到mongodb==================//
 
-mongoose.connect('mongodb://localhost/prostore');
+mongoose.connect('mongodb://localhost/contestStore');
 var db = mongoose.connection;
 
 //监听事件
@@ -51,11 +69,11 @@ mongoose.connection.once("close", function () {
 //===============用户相关==================//
 
 app.get('/', (req, res) => {
-	res.send('Please use /api/plotS or /api/genres');
+	res.send('welconm');
 });
 
 //登录
-app.post(`/api/login`, (req, res) => {
+app.post(`/login`, (req, res) => {
 	var t = req.body;
 	users.findOne({ "name": t.userName, "pass": t.passWord }, (err, user) => {
 		if (err) {
@@ -71,8 +89,25 @@ app.post(`/api/login`, (req, res) => {
 	});
 })
 
+//登录
+app.post(`/logout`, (req, res) => {
+	var t = req.body;
+	users.findOne({ "name": t.userName, "pass": t.passWord }, (err, user) => {
+		if (err) {
+			//console.log(err);
+			throw err;
+		}
+		if (user) {
+			res.send("退出成功");
+		}
+		else {
+			res.send("登录失败")
+		}
+	});
+})
+
 //注册
-app.post(`/api/register`, (req, res) => {
+app.post(`/register`, (req, res) => {
 	var t = req.body;
 	const params = { "name": t.userName, "pass": t.passWord, "supproject": [], "buyproject": [], "iftruename": false}
 	users.create(params, (err, user) => {
@@ -90,7 +125,7 @@ app.post(`/api/register`, (req, res) => {
 })
 
 //删除用户信息
-app.delete('/api/userDelete/:_id', (req, res) => {
+app.delete('/userDelete/:_id', (req, res) => {
 	var query = { _id: req.params._id };
 	users.deleteOne(query, (err, user) => {
 		if (err) {
@@ -103,7 +138,7 @@ app.delete('/api/userDelete/:_id', (req, res) => {
 // TODO:===============支持记录==================//
 
 //查询支持记录
-app.get('/api/projects/suportRecord/:projectName', (req, res, next) => {
+app.get('/projects/suportRecord/:projectName', (req, res, next) => {
 	console.log('搜索项目的支持记录')
 	suportrecords.find({ "proName": req.params.projectName }, (err, projectRc) => {
 		console.log(projectRc)
@@ -122,7 +157,7 @@ app.get('/api/projects/suportRecord/:projectName', (req, res, next) => {
 });
 
 //添加用户支持记录
-app.post('/api/projects/suportRecord/add', (req, res, next) => {
+app.post('/projects/suportRecord/add', (req, res, next) => {
 	console.log('添加用户支持记录,即用户支持了事情')
 	//req.body test {"proName":"hahaha","userName":"wu","suportTime":"","suportMoney":131}
 	suportrecords.create(req.body, (err, userSuport) => {
@@ -145,7 +180,7 @@ app.post('/api/projects/suportRecord/add', (req, res, next) => {
 // TODO:===============订单记录==================//
 
 // //查询订购记录
-// app.get('/api/projects/buyRecord/:projectName', (req, res, next) => {
+// app.get('/projects/buyRecord/:projectName', (req, res, next) => {
 // 	console.log('搜索项目的支持记录')
 // 	buyRecords.find({ "proName": req.params.projectName }, (err, projectRc) => {
 // 		console.log(projectRc)
@@ -164,7 +199,7 @@ app.post('/api/projects/suportRecord/add', (req, res, next) => {
 // });
 
 //查询用户的所有订购记录
-app.get('/api/projects/buyRecord/:userName', (req, res, next) => {
+app.get('/projects/buyRecord/:userName', (req, res, next) => {
 	console.log('搜索项目的支持记录')
 	buyRecords.find({ "userName": req.params.userName }, (err, RcArr) => {
 		console.log(RcArr)
@@ -184,7 +219,7 @@ app.get('/api/projects/buyRecord/:userName', (req, res, next) => {
 
 
 //添加用户订购记录
-app.post('/api/projects/buyRecord/add', (req, res, next) => {
+app.post('/projects/buyRecord/add', (req, res, next) => {
 	console.log('添加用户支持记录,即用户支持了事情')
 	//req.body test {"proName":"hahaha","userName":"wu","suportTime":"","suportMoney":131}
 	buyRecords.create(req.body, (err, userSuport) => {
@@ -229,7 +264,7 @@ async function addImgUrl(list,res) {
 
 
 //查询所有项目
-app.get('/api/projects/search/all', (req, res, next) => {
+app.get('/projects/search/all', (req, res, next) => {
 	console.log('搜索所有项目')
 	var resp = {}
 	projects.find((err, project) => {
@@ -243,7 +278,7 @@ app.get('/api/projects/search/all', (req, res, next) => {
 });
 
 //按项目名查询单个项目
-app.post('/api/projects/search/name', (req, res, next) => {
+app.post('/projects/search/name', (req, res, next) => {
 	console.log('搜索单个项目')
 	let t = req.body
 	projects.findOne({ "name": t.proName }, (err, project) => {
@@ -263,7 +298,7 @@ app.post('/api/projects/search/name', (req, res, next) => {
 
 
 //按用户名查询项目
-app.post('/api/projects/search/owner', (req, res, next) => {
+app.post('/projects/search/owner', (req, res, next) => {
 	let t = req.body
 	projects.find({ "owner": t.owner }, (err, project) => {
 		if (err) {
@@ -279,7 +314,7 @@ app.post('/api/projects/search/owner', (req, res, next) => {
 });
 
 //按名字给项目添加支持，post
-app.post('/api/projects/suport', (req, res, next) => {
+app.post('/projects/suport', (req, res, next) => {
 	console.log('搜索单个项目')
 	let t = req.body
 	console.log(t);
@@ -310,7 +345,7 @@ app.post('/api/projects/suport', (req, res, next) => {
 });
 
 //按名字给项目添加支持
-app.get('/api/projects/suport/:name', (req, res, next) => {
+app.get('/projects/suport/:name', (req, res, next) => {
 	console.log('用户添加支持')
 	let t = req.params.name
 	projects.findOne({ "name": t }, (err, project) => {
@@ -342,7 +377,7 @@ app.get('/api/projects/suport/:name', (req, res, next) => {
 });
 
 //按名字给项目添加访问量
-app.get('/api/projects/view/:name', (req, res, next) => {
+app.get('/projects/view/:name', (req, res, next) => {
 	console.log('用户添加支持')
 	let t = req.params.name
 	projects.findOne({ "name": t }, (err, project) => {
@@ -375,7 +410,7 @@ app.get('/api/projects/view/:name', (req, res, next) => {
 });
 
 //添加用户项目
-app.post('/api/projects/addproject', (req, res, next) => {
+app.post('/projects/addproject', (req, res, next) => {
 	console.log('添加用户支持记录,即用户支持了事情')
 	//req.body test {"name":"hahaha","description":"真的好啊錒","owner":"wu","moneyHave":1386,"moneyTarget":389260,"timeStart":"","timeEnd":"","suportNum":131,"suportBaseNum":786,"viewNum":699}
 
@@ -475,7 +510,7 @@ app.post('/api/projects/addproject', (req, res, next) => {
 });
 
 //查看项目详情
-app.get('/api/projects/detail/:name', (req, res) => {
+app.get('/projects/detail/:name', (req, res) => {
 	let pathName = './public/test/' + req.params.name;
 	console.log('pathName: ', pathName);
 	var resp = {}
@@ -511,7 +546,7 @@ app.get('/api/projects/detail/:name', (req, res) => {
 })
 
 //获取图片base64
-app.get('/api/projects/imgurl/:name', (req, res) => {
+app.get('/projects/imgurl/:name', (req, res) => {
 	let pathName = './public/test/' + req.params.name;
 	console.log('pathName: ', pathName)
 	var dirs = []
@@ -527,7 +562,7 @@ app.get('/api/projects/imgurl/:name', (req, res) => {
 })
 
 //获取封面
-app.get('/api/projects/firstimgurl/:name', (req, res) => {
+app.get('/projects/firstimgurl/:name', (req, res) => {
 	let pathName = './public/test/' + req.params.name;
 	console.log('pathName: ', pathName)
 	var dirs = []
@@ -546,7 +581,7 @@ app.get('/api/projects/firstimgurl/:name', (req, res) => {
 })
 
 //删除用户项目
-app.delete('/api/projects/:name', (req, res) => {
+app.delete('/projects/:name', (req, res) => {
 	var query = { name: req.params.name };
 	projects.deleteOne(query, (err, project) => {
 		if (err) {
@@ -557,7 +592,7 @@ app.delete('/api/projects/:name', (req, res) => {
 });
 
 // 编辑用户项目
-app.post('/api/projects/edit', (req, res, next) => {
+app.post('/projects/edit', (req, res, next) => {
 	console.log('编辑用户项目',req.body,req)
 	let t = req.body._id
 	projects.findOne({ _id: t }, (err, project) => {
@@ -593,7 +628,7 @@ app.post('/api/projects/edit', (req, res, next) => {
 // ----------------收货地址管理================//
 
 // 用户名查询收货地址
-app.post('/api/projects/receive/owner', (req, res, next) => {
+app.post('/projects/receive/owner', (req, res, next) => {
 	let t = req.body
 	receive.find({ "owner": t.owner }, (err, project) => {
 		if (err) {
@@ -609,7 +644,7 @@ app.post('/api/projects/receive/owner', (req, res, next) => {
 });
 
 //添加用户地址 TODO: 记得加上用户名
-app.post('/api/projects/receive/add', (req, res, next) => {
+app.post('/projects/receive/add', (req, res, next) => {
 	console.log('添加用户支持记录,即用户支持了事情')
 	//req.body test {"proName":"hahaha","userName":"wu","suportTime":"","suportMoney":131}
 	receive.create(req.body, (err, userSuport) => {
@@ -629,7 +664,7 @@ app.post('/api/projects/receive/add', (req, res, next) => {
 });
 
 //删除用户地址
-app.delete('/api/receive/:id', (req, res) => {
+app.delete('/receive/:id', (req, res) => {
 	var query = { _id: req.params._id };
 	receive.deleteOne(query, (err, project) => {
 		if (err) {
@@ -641,7 +676,7 @@ app.delete('/api/receive/:id', (req, res) => {
 
 
 //编辑用户地址
-app.post('/api/receive/edit', (req, res, next) => {
+app.post('/receive/edit', (req, res, next) => {
 	console.log('编辑用户地址',req.body,req)
 	let t = req.body._id
 	projects.findOne({ _id: t }, (err, project) => {
@@ -672,5 +707,5 @@ app.post('/api/receive/edit', (req, res, next) => {
 	});
 });
 
-app.listen(5001)
-console.log('Running on port 5001...');
+app.listen(5000)
+console.log('Running on port 5000...');
