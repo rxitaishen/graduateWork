@@ -32,6 +32,16 @@ function imgToBase64(url) {
 	}
 }
 
+function getTitleAndLink(targetText) {
+	// const targetText = '关于启动浙江财经大学第十八届大学生电子商务竞赛 ... https://jwc.zufe.edu.cn/sanji-content.jsp?urltype=news.NewsContentUrl&wbtreeid=1082&wbnewsid=8035';
+	const arr = targetText.split(" ");
+	const obj = {
+	title: arr.slice(0, 2).join(" "),
+	link: arr[2]
+	};
+	console.log(obj)
+}
+
 
 function getNotices() {
 	const pythonScript = spawn('python', ['./public/爬取通知.py']);
@@ -48,6 +58,7 @@ function getNotices() {
 	  console.log(`Python script exited with code ${code}`);
 	});
 }
+
 
 
 
