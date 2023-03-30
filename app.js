@@ -126,6 +126,7 @@ function getNotices() {
   let res = "";
   // let cmd = 'pip install requests --user && pip install bs4 --user && python ./public/爬取通知.py '
   let cmd = "python ./public/爬取通知.py ";
+  
   function myAsyncFunction() {
     return new Promise(function (resolve, reject) {
       exec(cmd, { encoding: binaryEncoding }, (error, stdout, stderr) => {
