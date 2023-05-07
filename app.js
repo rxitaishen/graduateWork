@@ -330,9 +330,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
 // 该队伍名下所有成员
 
-app.post("/api/myGroup/list", (req, res, next) => {
-  var t = req.body;
-  teamMember.find({ teamId: t.teamId }, (err, RcArr) => {
+app.post("/myGroup/list", (req, res, next) => {
+  teamMember.find(req.body, (err, RcArr) => {
     console.log(RcArr);
     if (err) {
       throw err;
@@ -340,7 +339,10 @@ app.post("/api/myGroup/list", (req, res, next) => {
     if (RcArr.length !== 0) {
       //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
       console.log("RcArr不为null", RcArr);
-      res.json(RcArr);
+      res.json({
+        total: RcArr.length,
+        rows: RcArr
+      });
     } else {
       console.log("RcArr为null");
       res.send("未找到相关信息");
@@ -365,14 +367,19 @@ app.post(`/myGroup/detail`, (req, res) => {
 });
 
 //删除成员
-app.delete("/myGroup/:userName", (req, res) => {
-  var query = { userName: req.params.userName };
+app.delete("/myGroup/:_id", (req, res) => {
+  var query = { _id: req.params._id };
   console.log(query);
   teamMember.deleteOne(query, (err, project) => {
     if (err) {
       throw err;
     }
-    res.send('1');
+    if (project !== null) {
+      res.json(1);
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
   });
 });
 
