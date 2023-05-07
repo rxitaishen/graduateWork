@@ -293,10 +293,7 @@ app.get("/mainStd/notice", (req, res) => {
 
 //查询队伍成员/mainStd/member
 app.post("/mainStd/member", (req, res, next) => {
-  console.log("搜索项目的支持记录");
-  const teamId = req.params.teamId;
-  teamMember.find({ teamId }, (err, teamMembers) => {
-    console.log(member);
+  teamMember.find(req.body, (err, teamMembers) => {
     if (err) {
       throw err;
     }
