@@ -58,7 +58,7 @@ for link in Esoup.find_all('a', style='text-decoration:none'):
     res_link = 'https://jwc.zufe.edu.cn/' + href
     print(f" {res_tag} {res_link}")
     
-print()
+print('==============================')
 
 for link in Csoup.find_all('a', style='text-decoration:none'):
     href = link.get('href')
