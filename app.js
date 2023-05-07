@@ -162,7 +162,7 @@ function getNotices() {
 
 //===============链接到mongodb==================//
 
-mongoose.connect('mongodb://localhost/competStore');
+mongoose.connect('mongodb://localhost/competstore');
 var db = mongoose.connection;
 
 //监听事件
@@ -177,7 +177,6 @@ mongoose.connection.once("close", function () {
 //===============用户相关==================//
 
 app.get("/", (req, res) => {
-  
   getNotices()
     .then(function (result) {
       res.send(result);
@@ -190,7 +189,7 @@ app.get("/", (req, res) => {
 //登录
 app.post(`/login`, (req, res) => {
   var t = req.body;
-  users.findOne({ name: t.userName, pass: t.passWord }, (err, user) => {
+  student.findOne({ userName: t.userName, passWord: t.passWord }, (err, user) => {
     if (err) {
       //console.log(err);
       throw err;
@@ -206,7 +205,7 @@ app.post(`/login`, (req, res) => {
 //登出
 app.post(`/logout`, (req, res) => {
   var t = req.body;
-  users.findOne({ name: t.userName, pass: t.passWord }, (err, user) => {
+  student.findOne({ name: t.userName, pass: t.passWord }, (err, user) => {
     if (err) {
       //console.log(err);
       throw err;
@@ -222,17 +221,17 @@ app.post(`/logout`, (req, res) => {
 // 注册函数
 const userRegister = (t, identy, res) => {
   const stdParams = {
-    t,
+    ...t,
     roleInTeam: '队长',
     teamId: Math.floor(Math.random() * 90000) + 10000,
     projectId: Math.floor(Math.random() * 900) + 100,
   };
   const teacherParams = {
-    t,
+    ...t,
     projectToAudit: [],
   };
   const adminParams = {
-    t,
+    ...t,
   };
   const kuArr = [student, teacher, admin];
   const paramsArr = [stdParams, teacherParams, adminParams];
@@ -272,7 +271,7 @@ app.post(`/register`, (req, res) => {
 //删除用户信息
 app.delete("/userDelete/:_id", (req, res) => {
   var query = { _id: req.params._id };
-  users.deleteOne(query, (err, user) => {
+  student.deleteOne(query, (err, user) => {
     if (err) {
       throw err;
     }
@@ -335,7 +334,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 // 该队伍名下所有成员
 
 app.post("/api/myGroup/list", (req, res, next) => {
-  buyRecords.find({ teamId: req.params.teamId }, (err, RcArr) => {
+  var t = req.body;
+  teamMember.find({ teamId: t.teamId }, (err, RcArr) => {
     console.log(RcArr);
     if (err) {
       throw err;
@@ -362,24 +362,26 @@ app.post(`/myGroup/detail`, (req, res) => {
         res.json(tm);
     } else {
       console.log("proName为null");
-      res.send(0);
+      res.send('0');
     }
   });
 });
 
 //删除成员
-app.delete("/projects/:name", (req, res) => {
-  var query = { name: req.params.name };
+app.delete("/myGroup/:userName", (req, res) => {
+  var query = { userName: req.params.userName };
+  console.log(query);
   teamMember.deleteOne(query, (err, project) => {
     if (err) {
       throw err;
     }
-    res.json(1);
+    res.send('1');
   });
 });
 
 // 添加成员
 app.post(`/myGroup/add`, (req, res) => {
+  console.log(req.body)
   teamMember.create(req.body, (err, user) => {
     if (err) {
       //console.log(err);
@@ -387,10 +389,10 @@ app.post(`/myGroup/add`, (req, res) => {
     }
     if (user) {
       console.log("队员添加成功");
-      res.send(1);
+      res.send('1');
     } else {
       console.log("队员添加失败");
-      res.send(0);
+      res.send('0');
     }
   });
 });
@@ -407,19 +409,19 @@ app.post("/myGroup/update", (req, res, next) => {
       //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
       teamMember.updateOne({ _id: t }, req.body, (err, docs) => {
         if (err) {
-          res.json(0);
+          res.send('0');
         }
         /**更新数据成功，紧接着查询数据 */
         teamMember.findOne({ _id: t }, (err, t) => {
           if (err) {
-            res.json(0);
+            res.send('0');
           }
           res.json(t);
         });
       });
     } else {
       console.log("proName为null");
-      res.send(0);
+      res.send('0');
     }
   });
 });

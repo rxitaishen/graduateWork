@@ -2,14 +2,14 @@ const mongoose = require('mongoose');
 
 // Book Schema
 const teacherSchema = mongoose.Schema({
-	"name":{
+	"userName":{
 		type: String,
 	},
-	"pass":{
+	"passWord":{
 		type: String,	
 	},
     "sex":{
-		type: Number,	
+		type: String,	
 	},
     // 职称
     "workPosition":{

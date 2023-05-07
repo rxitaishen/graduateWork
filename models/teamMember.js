@@ -18,7 +18,7 @@ const teamMemberSchema = mongoose.Schema({
 	'roleInTeam':{
 		type: String,
 	},
-	// 这下面的不用放前端
+	// 这下面的不用放前端页面中，但要前端配好传过来
 	"teamId":{
 		type: String,
 	},
@@ -27,4 +27,4 @@ const teamMemberSchema = mongoose.Schema({
 	},
 });
 
-const TeamMembers = module.exports = mongoose.model('teamMembers', teamMemberSchema);
+const TeamMembers = module.exports = mongoose.model('teammembers', teamMemberSchema);
