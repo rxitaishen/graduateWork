@@ -308,7 +308,7 @@ app.post("/mainStd/member", (req, res, next) => {
 
 
 
-// TODO:===============支持记录==================//
+// ===============支持记录==================//
 
 // 配置 multer
 const upload = multer({
@@ -324,7 +324,177 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 
+// ===============管理员端==================//
 
+app.post("/admin/list", (req, res, next) => {
+  project.find({ passOrNot: true }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+        res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
+  });
+});
+
+// 报名表检索
+app.post("/admin/signPageList", (req, res, next) => {
+  signpage.find((err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+        res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
+  });
+});
+
+
+// 报名表详情
+app.post(`/admin/signPageDetail`, (req, res) => {
+  var t = req.body;
+  signpage.findOne({ _id: t._id }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+        res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
+  });
+});
+
+// 更新报名表（通过、分配专家、智能审核）
+app.post("/myGroup/check", (req, res, next) => {
+  let t = req.body._id;
+  signpage.findOne({ _id: t }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
+      signpage.updateOne({ _id: t }, req.body, (err, docs) => {
+        if (err) {
+          res.send('0');
+        }
+        /**更新数据成功，紧接着查询数据 */
+        signpage.findOne({ _id: t }, (err, t) => {
+          if (err) {
+            res.send('0');
+          }
+          res.json(t);
+        });
+      });
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
+  });
+});
+
+// 更新项目（通过、分配专家、智能审核）
+app.post("/myGroup/update", (req, res, next) => {
+  console.log("编辑成员", req.body, req);
+  let t = req.body._id;
+  project.findOne({ _id: t }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
+      project.updateOne({ _id: t }, req.body, (err, docs) => {
+        if (err) {
+          res.send('0');
+        }
+        /**更新数据成功，紧接着查询数据 */
+        project.findOne({ _id: t }, (err, t) => {
+          if (err) {
+            res.send('0');
+          }
+          res.json(t);
+        });
+      });
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
+  });
+});
+
+app.post("/admin/getTeacher", (req, res, next) => {
+  teacher.find( (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+        const result = tm.map((item) => {
+          return { label: item.userName, value: item.workId };
+        })
+        res.json(result);
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
+  });
+});
+
+// ===============教师评审==================//
+app.post("/myJudge/list", (req, res, next) => {
+  project.find({ auditTeachers: { $in: [req.body.workId] } }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+        res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send('0');
+    }
+  });
+});
+
+//获取原文件
+app.post("/myJudge/filebackup", (req, res) => {
+  let pathName = "./public/test/" + req.params.proName;
+  console.log("pathName: ", pathName);
+  fs.readdir(pathName, (err, file) => {
+    console.log("获取文件", file);
+    if (file !== undefined) {
+      res.send(file);
+    } else {
+      res.send("未找到对应封面");
+    }
+    //前台就给封面设置一个state变量好了，然后监听这个state变量
+  });
+});
+
+app.post('/myJudge/file', (req, res) => {
+  let { proName } = req.body;
+  // let { proName } = req.params;
+  let filePath = "./public/test/" + proName + ".docx";
+  console.log(filePath)
+  // const filePath = path.join(__dirname, 'word', `${proName}.docx`);
+  const file = fs.createReadStream(filePath);
+  file.on('open', () => {
+    // 设置响应头，告诉浏览器返回的是 Word 文件类型，从而触发文件下载操作。
+    proName = encodeURIComponent(proName); // 对文件名进行编码
+    res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.set('Content-Disposition', `attachment; filename=${proName}.docx`);
+    file.pipe(res);
+  });
+  file.on('error', (err) => {
+    console.log(err);
+    res.status(500).send('Internal Server Error');
+  });
+});
 
 // ===============成员记录==================//
 

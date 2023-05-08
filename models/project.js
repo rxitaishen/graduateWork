@@ -5,15 +5,25 @@ const ProjectSchema = mongoose.Schema({
 	"proName":{
 		type: String,
 	},
+    "proType":{
+		type: String,
+	},
+    // 用来判断是pdf还是word
+    "fileType":{
+		type: String,
+	},
 	"passOrNot":{
 		type: Boolean,	
 	},
-    "ownerId":{
-        type: Number,
+    "owner":{
+        type: String,
     },
-    "team":{
-		type: Array,
+    "teamId":{
+		type: String,
 	},
+    "auditTeachers":{
+        type: Array,
+    },
 	"ownerCallNumber":{
 		type: Number,
 	},

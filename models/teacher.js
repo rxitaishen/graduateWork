@@ -22,7 +22,7 @@ const teacherSchema = mongoose.Schema({
 	"callNumber":{
 		type: Number,
 	},
-	// 这里不用放前端
+	// 这里不用放前端,不知道这个属性还要不要
 	"projectToAudit":{
 		type: Array,
 	},
