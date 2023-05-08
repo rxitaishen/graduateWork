@@ -2,16 +2,16 @@ const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const getContentCheckResult = require("./baiduAi.js");
 const path = require("path");
 const fs = require("fs");
 const mineType = require("mime-types");
 var multiparty = require("multiparty");
 const { exec } = require("child_process");
-const multer = require('multer');
+const multer = require("multer");
 var iconv = require("iconv-lite");
 var encoding = "cp936";
 var binaryEncoding = "binary";
-
 
 teamMember = require("./models/teamMember");
 project = require("./models/project");
@@ -40,31 +40,30 @@ function imgToBase64(url) {
 
 //TODO:怎么经常去更新这个元素在新arr里的位置？这里的bug因为上面的i就是固定的了，不会因为arr减少而减少
 function TEST_getTitleAndLink(targetText) {
-	console.log('%c targetText', 'color: red', targetText);
+  console.log("%c targetText", "color: red", targetText);
   //const targetText = '关于启动浙江财经大学第十八届大学生电子商务竞赛 ... https://jwc.zufe.edu.cn/sanji-content.jsp?urltype=news.NewsContentUrl&wbtreeid=1082&wbnewsid=8035';
-  
-  function getTL(arrTL){
-	// console.log('%c arrTL', 'color: red', arrTL);
-	let obj = {}
-	try {
-		if(arrTL.length == 3){
-			obj = {
-				title: arrTL.slice(0, 2).join(" "),
-				link: arrTL[2]
-			}; 
-		} else {
-			obj = {
-				title: arrTL[0],
-				link: arrTL[1]
-			}
-		}
-	} catch (error) {
-		console.log(error);
-		console.log('%c arrTL', 'color: blue', arrTL);
-	}
-	
-	
-	return obj;
+
+  function getTL(arrTL) {
+    // console.log('%c arrTL', 'color: red', arrTL);
+    let obj = {};
+    try {
+      if (arrTL.length == 3) {
+        obj = {
+          title: arrTL.slice(0, 2).join(" "),
+          link: arrTL[2],
+        };
+      } else {
+        obj = {
+          title: arrTL[0],
+          link: arrTL[1],
+        };
+      }
+    } catch (error) {
+      console.log(error);
+      console.log("%c arrTL", "color: blue", arrTL);
+    }
+
+    return obj;
   }
 
   const arr = targetText.split(" ");
@@ -73,65 +72,72 @@ function TEST_getTitleAndLink(targetText) {
   let temp = [];
   const tempTitles = [];
   const tempLink = [];
-  const gtx = /[\u4e00-\u9fff]+/
+  const gtx = /[\u4e00-\u9fff]+/;
 
-  console.log('%c arr', 'color: red', arr);
+  console.log("%c arr", "color: red", arr);
   for (let i = 0; i < arr.length; i++) {
-	if(arr[i].indexOf("https") > -1){
-		tempLink.push(arr[i]);
-		// temp = arr.splice(0, i+1 - length);
-		// length = length + temp.length;
-		// tempArr.push(temp) // TODO:怎么经常去更新这个元素在新arr里的位置？这里的bug因为上面的i就是固定的了，不会因为arr减少而减少
-		// console.log('%c length', 'color: yellow', length, i+1 - length);
-		// console.log('%c tempArr', 'color: yellow', tempArr);
-	} else if(gtx.test(arr[i]) || arr[i].indexOf("赛") > -1 || arr[i].indexOf("赛") > -1 ){
-		tempTitles.push(arr[i]);
-	}
-	console.log('%c tempTitles', 'color: yellow', tempTitles);
-	console.log('%c tempLink', 'color: yellow', tempLink);
+    if (arr[i].indexOf("https") > -1) {
+      tempLink.push(arr[i]);
+      // temp = arr.splice(0, i+1 - length);
+      // length = length + temp.length;
+      // tempArr.push(temp) // TODO:怎么经常去更新这个元素在新arr里的位置？这里的bug因为上面的i就是固定的了，不会因为arr减少而减少
+      // console.log('%c length', 'color: yellow', length, i+1 - length);
+      // console.log('%c tempArr', 'color: yellow', tempArr);
+    } else if (
+      gtx.test(arr[i]) ||
+      arr[i].indexOf("赛") > -1 ||
+      arr[i].indexOf("赛") > -1
+    ) {
+      tempTitles.push(arr[i]);
+    }
+    console.log("%c tempTitles", "color: yellow", tempTitles);
+    console.log("%c tempLink", "color: yellow", tempLink);
   }
-  
-  
+
   const newArr = [];
 
   for (let i = 0; i < tempArr.length; i++) {
-	newArr.push(getTL(tempArr[i]))
+    newArr.push(getTL(tempArr[i]));
   }
 
   return newArr;
 }
 
 function getTitleAndLink(targetText) {
-	// console.log('%c targetText', 'color: red', targetText);
+  // console.log('%c targetText', 'color: red', targetText);
   //const targetText = '关于启动浙江财经大学第十八届大学生电子商务竞赛 ... https://jwc.zufe.edu.cn/sanji-content.jsp?urltype=news.NewsContentUrl&wbtreeid=1082&wbnewsid=8035';
   const targetDS = targetText.split("==============================");
   console.log(targetDS);
-  const result = targetDS.map((tempTarget)=>{
+  const result = targetDS.map((tempTarget) => {
     const arr = tempTarget.split(" ");
     const tempArr = [];
     let length = 0;
     let temp = [];
     const tempTitles = [];
     const tempLink = [];
-    const gtx = /[\u4e00-\u9fff]+/
+    const gtx = /[\u4e00-\u9fff]+/;
 
     // console.log('%c arr', 'color: red', arr);
     for (let i = 0; i < arr.length; i++) {
-      if(arr[i].indexOf("https") > -1){
+      if (arr[i].indexOf("https") > -1) {
         tempLink.push(arr[i]);
-      } else if(gtx.test(arr[i]) || arr[i].indexOf("赛") > -1 || arr[i].indexOf("赛") > -1 ){
+      } else if (
+        gtx.test(arr[i]) ||
+        arr[i].indexOf("赛") > -1 ||
+        arr[i].indexOf("赛") > -1
+      ) {
         tempTitles.push(arr[i]);
       }
     }
 
-    const tempObj = {titles: tempTitles, links: tempLink};
+    const tempObj = { titles: tempTitles, links: tempLink };
     const res = tempObj.titles.map((title, index) => ({
       title: title.trim(),
-      link: tempObj.links[index].trim()
+      link: tempObj.links[index].trim(),
     }));
 
     return res;
-  })
+  });
   return result;
 }
 
@@ -160,18 +166,45 @@ function getNotices() {
   return myAsyncFunction();
 }
 
+function getText(proName, callback) {
+  const filePath = `./public/test/${proName}.docx`;
+  const fs = require("fs");
+  const AdmZip = require("adm-zip"); //引入查看zip文件的包
+  const zip = new AdmZip(filePath); //filePath为文件路径
+  let contentXml = zip.readAsText("word/document.xml"); //将document.xml读取为text内容；
+  let str = "";
+  contentXml.match(/<w:t>[\s\S]*?<\/w:t>/gi).forEach((item) => {
+    str += item.slice(5, -6);
+  });
+  callback(str);
+}
+
+function baiduAI(proName) {
+  return new Promise((resolve, reject) => {
+    getText(proName, (text) => {
+      getContentCheckResult(text)
+        .then((result) => {
+          resolve(result);
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+  });
+}
+
 //===============链接到mongodb==================//
 
-mongoose.connect('mongodb://localhost/competstore');
+mongoose.connect("mongodb://localhost/competstore");
 var db = mongoose.connection;
 
 //监听事件
 mongoose.connection.once("open", function () {
-	console.log("数据库连接成功~~~");
+  console.log("数据库连接成功~~~");
 });
 
 mongoose.connection.once("close", function () {
-	console.log("数据库连接已经断开~~~");
+  console.log("数据库连接已经断开~~~");
 });
 
 //===============用户相关==================//
@@ -189,17 +222,20 @@ app.get("/", (req, res) => {
 //登录
 app.post(`/login`, (req, res) => {
   var t = req.body;
-  student.findOne({ userName: t.userName, passWord: t.passWord }, (err, user) => {
-    if (err) {
-      //console.log(err);
-      throw err;
+  student.findOne(
+    { userName: t.userName, passWord: t.passWord },
+    (err, user) => {
+      if (err) {
+        //console.log(err);
+        throw err;
+      }
+      if (user) {
+        res.send("登录成功");
+      } else {
+        res.send("登录失败");
+      }
     }
-    if (user) {
-      res.send("登录成功");
-    } else {
-      res.send("登录失败");
-    }
-  });
+  );
 });
 
 //登出
@@ -222,7 +258,7 @@ app.post(`/logout`, (req, res) => {
 const userRegister = (t, identy, res) => {
   const stdParams = {
     ...t,
-    roleInTeam: '队长',
+    roleInTeam: "队长",
     teamId: Math.floor(Math.random() * 90000) + 10000,
     projectId: Math.floor(Math.random() * 900) + 100,
   };
@@ -241,7 +277,7 @@ const userRegister = (t, identy, res) => {
       //console.log(err);
       throw err;
     }
-    if(identy === 0){
+    if (identy === 0) {
       teamMember.create(stdParams, (err, user) => {
         if (err) {
           //console.log(err);
@@ -260,12 +296,12 @@ const userRegister = (t, identy, res) => {
       res.send("注册失败");
     }
   });
-}
+};
 
 //注册
 app.post(`/register`, (req, res) => {
   var t = req.body;
-  userRegister(t, t.identy, res)
+  userRegister(t, t.identy, res);
 });
 
 //删除用户信息
@@ -284,7 +320,7 @@ app.get("/mainStd/notice", (req, res) => {
   // res.send('welconm');
   getNotices()
     .then(function (result) {
-      	res.send(getTitleAndLink(result.substr(1)));
+      res.send(getTitleAndLink(result.substr(1)));
     })
     .catch(function (error) {
       console.error(error); // 处理错误
@@ -306,39 +342,22 @@ app.post("/mainStd/member", (req, res, next) => {
   });
 });
 
-
-
 // ===============支持记录==================//
 
 // 配置 multer
 const upload = multer({
-  storage: multer.memoryStorage() // 把文件存储在内存中
+  storage: multer.memoryStorage(), // 把文件存储在内存中
 });
 
 // 处理文件上传请求
-app.post('/upload', upload.single('file'), async (req, res) => {
+app.post("/upload", upload.single("file"), async (req, res) => {
   const file = req.file; // 获取上传的文件
   const fileData = file.buffer; // 获取上传文件的二进制数据
   // 将二进制数据写入到数据库中
-  res.send({ message: 'File uploaded successfully' });
+  res.send({ message: "File uploaded successfully" });
 });
-
 
 // ===============管理员端==================//
-
-app.post("/admin/list", (req, res, next) => {
-  project.find({ passOrNot: true }, (err, tm) => {
-    if (err) {
-      throw err;
-    }
-    if (tm !== null) {
-        res.json(tm);
-    } else {
-      console.log("proName为null");
-      res.send('0');
-    }
-  });
-});
 
 // 报名表检索
 app.post("/admin/signPageList", (req, res, next) => {
@@ -347,14 +366,13 @@ app.post("/admin/signPageList", (req, res, next) => {
       throw err;
     }
     if (tm !== null) {
-        res.json(tm);
+      res.json(tm);
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
 });
-
 
 // 报名表详情
 app.post(`/admin/signPageDetail`, (req, res) => {
@@ -364,10 +382,10 @@ app.post(`/admin/signPageDetail`, (req, res) => {
       throw err;
     }
     if (tm !== null) {
-        res.json(tm);
+      res.json(tm);
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
 });
@@ -383,19 +401,34 @@ app.post("/myGroup/check", (req, res, next) => {
       //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
       signpage.updateOne({ _id: t }, req.body, (err, docs) => {
         if (err) {
-          res.send('0');
+          res.send("0");
         }
         /**更新数据成功，紧接着查询数据 */
         signpage.findOne({ _id: t }, (err, t) => {
           if (err) {
-            res.send('0');
+            res.send("0");
           }
           res.json(t);
         });
       });
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
+    }
+  });
+});
+
+// 列举项目
+app.post("/admin/list", (req, res, next) => {
+  project.find({ passOrNot: true }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send("0");
     }
   });
 });
@@ -412,38 +445,57 @@ app.post("/myGroup/update", (req, res, next) => {
       //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
       project.updateOne({ _id: t }, req.body, (err, docs) => {
         if (err) {
-          res.send('0');
+          res.send("0");
         }
         /**更新数据成功，紧接着查询数据 */
         project.findOne({ _id: t }, (err, t) => {
           if (err) {
-            res.send('0');
+            res.send("0");
           }
           res.json(t);
         });
       });
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
 });
 
+// 获取教师
 app.post("/admin/getTeacher", (req, res, next) => {
-  teacher.find( (err, tm) => {
+  teacher.find((err, tm) => {
     if (err) {
       throw err;
     }
     if (tm !== null) {
-        const result = tm.map((item) => {
-          return { label: item.userName, value: item.workId };
-        })
-        res.json(result);
+      const result = tm.map((item) => {
+        return { label: item.userName, value: item.workId };
+      });
+      res.json(result);
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
+});
+
+// 一键审核
+app.post("/admin/auditByAi", (req, res, next) => {
+    
+  baiduAI(req.body.proName)
+    .then((result) => {
+      if (result !== null) {
+        // res.send("1");
+        res.send(result);
+      } else {
+        console.log("proName为null");
+        res.send("0");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+    });
 });
 
 // ===============教师评审==================//
@@ -453,10 +505,10 @@ app.post("/myJudge/list", (req, res, next) => {
       throw err;
     }
     if (tm !== null) {
-        res.json(tm);
+      res.json(tm);
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
 });
@@ -476,23 +528,26 @@ app.post("/myJudge/filebackup", (req, res) => {
   });
 });
 
-app.post('/myJudge/file', (req, res) => {
+app.post("/myJudge/file", (req, res) => {
   let { proName } = req.body;
   // let { proName } = req.params;
   let filePath = "./public/test/" + proName + ".docx";
-  console.log(filePath)
+  console.log(filePath);
   // const filePath = path.join(__dirname, 'word', `${proName}.docx`);
   const file = fs.createReadStream(filePath);
-  file.on('open', () => {
+  file.on("open", () => {
     // 设置响应头，告诉浏览器返回的是 Word 文件类型，从而触发文件下载操作。
     proName = encodeURIComponent(proName); // 对文件名进行编码
-    res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.set('Content-Disposition', `attachment; filename=${proName}.docx`);
+    res.set(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    );
+    res.set("Content-Disposition", `attachment; filename=${proName}.docx`);
     file.pipe(res);
   });
-  file.on('error', (err) => {
+  file.on("error", (err) => {
     console.log(err);
-    res.status(500).send('Internal Server Error');
+    res.status(500).send("Internal Server Error");
   });
 });
 
@@ -511,7 +566,7 @@ app.post("/myGroup/list", (req, res, next) => {
       console.log("RcArr不为null", RcArr);
       res.json({
         total: RcArr.length,
-        rows: RcArr
+        rows: RcArr,
       });
     } else {
       console.log("RcArr为null");
@@ -528,10 +583,10 @@ app.post(`/myGroup/detail`, (req, res) => {
       throw err;
     }
     if (tm !== null) {
-        res.json(tm);
+      res.json(tm);
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
 });
@@ -548,14 +603,14 @@ app.delete("/myGroup/:_id", (req, res) => {
       res.json(1);
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
 });
 
 // 添加成员
 app.post(`/myGroup/add`, (req, res) => {
-  console.log(req.body)
+  console.log(req.body);
   teamMember.create(req.body, (err, user) => {
     if (err) {
       //console.log(err);
@@ -563,10 +618,10 @@ app.post(`/myGroup/add`, (req, res) => {
     }
     if (user) {
       console.log("队员添加成功");
-      res.send('1');
+      res.send("1");
     } else {
       console.log("队员添加失败");
-      res.send('0');
+      res.send("0");
     }
   });
 });
@@ -583,19 +638,19 @@ app.post("/myGroup/update", (req, res, next) => {
       //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
       teamMember.updateOne({ _id: t }, req.body, (err, docs) => {
         if (err) {
-          res.send('0');
+          res.send("0");
         }
         /**更新数据成功，紧接着查询数据 */
         teamMember.findOne({ _id: t }, (err, t) => {
           if (err) {
-            res.send('0');
+            res.send("0");
           }
           res.json(t);
         });
       });
     } else {
       console.log("proName为null");
-      res.send('0');
+      res.send("0");
     }
   });
 });
