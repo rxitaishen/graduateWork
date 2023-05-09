@@ -6,13 +6,14 @@ const getContentCheckResult = require("./baiduAi.js");
 const path = require("path");
 const fs = require("fs");
 const mineType = require("mime-types");
-var multiparty = require("multiparty");
 const { exec } = require("child_process");
 const multer = require("multer");
 var iconv = require("iconv-lite");
 var encoding = "cp936";
 var binaryEncoding = "binary";
 
+// 初始化比赛
+publicCompetion = require("./models/publicCompetion.js");
 teamMember = require("./models/teamMember");
 project = require("./models/project");
 teacher = require("./models/teacher");
@@ -306,7 +307,7 @@ app.post(`/register`, (req, res) => {
 
 //删除用户信息
 app.delete("/userDelete/:_id", (req, res) => {
-  var query = { _id: req.params._id };
+  let query = { _id: req.params._id };
   student.deleteOne(query, (err, user) => {
     if (err) {
       throw err;
@@ -315,7 +316,38 @@ app.delete("/userDelete/:_id", (req, res) => {
   });
 });
 
-// ===============学生端 主缆==================//
+// ===============共用接口==================//
+
+app.post("/public/initCompet", (req, res) => {
+  publicCompetion.create({...req.body}, (err, compet) => {
+    if (err) {
+      //console.log(err);
+      throw err;
+    }
+    if (compet) {
+      res.send("竞赛初始化成功")
+    } else {
+      res.send("竞赛初始化失败");
+    }
+  })
+});
+
+app.get("/public/getCompTime", (req, res) => {
+  publicCompetion.find((err, compet) => {
+    if (err) {
+      //console.log(err);
+      throw err;
+    }
+    if (compet) {
+      res.send("报名成功")
+    } else {
+      res.send("报名失败");
+    }
+  })
+});
+
+
+// ===============学生端 主缆===============//
 app.get("/mainStd/notice", (req, res) => {
   // res.send('welconm');
   getNotices()
@@ -338,6 +370,23 @@ app.post("/mainStd/member", (req, res, next) => {
       res.json(teamMembers);
     } else {
       res.send("未找到相关信息");
+    }
+  });
+});
+
+//填写报名表
+app.post("/mainStd/sign", (req, res, next) => {
+  signpage.create({...req.body}, (err, user) => {
+    if (err) {
+      //console.log(err);
+      throw err;
+    }
+    if (user) {
+      console.log("报名成功");
+      res.send("报名成功");
+    } else {
+      console.log("报名失败");
+      res.send("报名失败");
     }
   });
 });
@@ -420,7 +469,7 @@ app.post("/myGroup/check", (req, res, next) => {
 
 // 列举项目
 app.post("/admin/list", (req, res, next) => {
-  project.find({ passOrNot: true }, (err, tm) => {
+  project.find((err, tm) => {
     if (err) {
       throw err;
     }
@@ -434,7 +483,7 @@ app.post("/admin/list", (req, res, next) => {
 });
 
 // 更新项目（通过、分配专家、智能审核）
-app.post("/myGroup/update", (req, res, next) => {
+app.post("/admin/update", (req, res, next) => {
   console.log("编辑成员", req.body, req);
   let t = req.body._id;
   project.findOne({ _id: t }, (err, tm) => {
@@ -447,13 +496,28 @@ app.post("/myGroup/update", (req, res, next) => {
         if (err) {
           res.send("0");
         }
-        /**更新数据成功，紧接着查询数据 */
-        project.findOne({ _id: t }, (err, t) => {
-          if (err) {
-            res.send("0");
-          }
-          res.json(t);
-        });
+        // TODO: 审核退回，防止下次提交的时候重名，其实也可以让上交的时候覆盖文件
+        if (req.body.passOrNot == 2) {
+          let query = { _id: req.body._id };
+          project.deleteOne(query, (err, project) => {
+            if (err) {
+              throw err;
+            }
+            if (project !== null) {
+              console.log("审核退回，删除对应文件");
+            } else {
+              console.log("找不到对应文件");
+            }
+          });
+        } else {
+          /**更新数据成功，紧接着查询数据 */
+          project.findOne({ _id: t }, (err, t) => {
+            if (err) {
+              res.send("0");
+            }
+            res.json(t);
+          });
+        }
       });
     } else {
       console.log("proName为null");
@@ -482,12 +546,38 @@ app.post("/admin/getTeacher", (req, res, next) => {
 
 // 一键审核
 app.post("/admin/auditByAi", (req, res, next) => {
-    
   baiduAI(req.body.proName)
     .then((result) => {
       if (result !== null) {
         // res.send("1");
-        res.send(result);
+        let t = req.body._id;
+        project.findOne({ _id: t }, (err, tm) => {
+          if (err) {
+            throw err;
+          }
+          if (tm !== null) {
+            const resText = result.data.conclusion + ":" + result.data.msg;
+            const params = {
+              aiScore: resText,
+            };
+            project.updateOne({ _id: t }, params, (err, docs) => {
+              if (err) {
+                res.send("0");
+              }
+              /**更新数据成功，紧接着查询数据 */
+              project.findOne({ _id: t }, (err, t) => {
+                if (err) {
+                  res.send("0");
+                }
+                // 发送的是结果+msg
+                res.json(resText);
+              });
+            });
+          } else {
+            console.log("proName为null");
+            res.send("0");
+          }
+        });
       } else {
         console.log("proName为null");
         res.send("0");

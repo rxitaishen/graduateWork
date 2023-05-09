@@ -12,8 +12,9 @@ const ProjectSchema = mongoose.Schema({
     "fileType":{
 		type: String,
 	},
+    // 0没审核 1审核通过 2审核没通过
 	"passOrNot":{
-		type: Boolean,	
+		type: Number,	
 	},
     "owner":{
         type: String,
@@ -28,7 +29,7 @@ const ProjectSchema = mongoose.Schema({
 		type: Number,
 	},
     "aiScore":{
-        type: Number,
+        type: String,
     },
     "auditScore": {
         type: Number,

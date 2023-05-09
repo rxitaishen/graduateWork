@@ -9,7 +9,7 @@ const signPageSchema = mongoose.Schema({
 		type: String,
 	},
     "callNumber":{
-		type: String,
+		type: Number,
 	},
 	"proOverview":{
 		type: String,
