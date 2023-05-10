@@ -1,6 +1,5 @@
 const express = require("express");
-const app = express();
-const bodyParser = require("body-parser");
+
 const mongoose = require("mongoose");
 const getContentCheckResult = require("./baiduAi.js");
 const path = require("path");
@@ -8,6 +7,10 @@ const fs = require("fs");
 const mineType = require("mime-types");
 const { exec } = require("child_process");
 const multer = require("multer");
+const fse = require('fs-extra');
+const multiparty = require('multiparty');
+const bodyParser = require('body-parser');
+
 var iconv = require("iconv-lite");
 var encoding = "cp936";
 var binaryEncoding = "binary";
@@ -22,22 +25,121 @@ admin = require("./models/adminUser");
 // 报名表
 signpage = require("./models/signpage");
 
+const app = express();
+const UPLOAD_DIR = path.resolve(__dirname, '.', 'target');
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-function imgToBase64(url) {
-  try {
-    let imgurl = url;
-    let imageData = fs.readFileSync(imgurl); //从根目录访问
-    if (!imageData) return "";
-    let bufferData = Buffer.from(imageData).toString("base64");
-    let base64 = "data:" + mineType.lookup(imgurl) + ";base64," + bufferData;
-    return base64;
-  } catch (error) {
-    return "";
+const extractExt = (filename) =>
+  filename.slice(filename.lastIndexOf('.'), filename.length);
+
+const createUploadedList = async (fileHash) => {
+  const fileDir = path.resolve(UPLOAD_DIR, fileHash);
+  return fse.existsSync(fileDir) ? await fse.readdir(fileDir) : [];
+};
+
+const pipeStream = (chunkPath, writeStream) => {
+  return new Promise((resolve) => {
+    const chunkReadStream = fse.createReadStream(chunkPath);
+    chunkReadStream.on('end', () => {
+      fse.unlinkSync(chunkPath);
+      resolve();
+    });
+    chunkReadStream.pipe(writeStream);
+  });
+};
+
+const mergeFileChunks = async (targetFilePath, fileHash, chunkSize) => {
+  const chunkDir = path.resolve(UPLOAD_DIR, fileHash);
+  const chunkNames = await fse.readdir(chunkDir);
+  // 根据分片下表排序
+  chunkNames.sort((a, b) => a.split('_')[1] - b.split('_')[1]);
+  console.log(targetFilePath)
+
+  await fse.writeFileSync(targetFilePath, '');
+
+  await Promise.all(
+    chunkNames.map((chunkName, index) => {
+      const chunkPath = path.resolve(chunkDir, chunkName);
+      return pipeStream(
+        chunkPath,
+        fse.createWriteStream(targetFilePath, {
+          start: index * chunkSize,
+        })
+      );
+    })
+  );
+
+  await fse.rmdir(chunkDir);
+};
+
+// 处理跨域
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  next();
+});
+
+// 解析请求体
+app.use(bodyParser.json());
+
+// 验证文件是否已上传过
+app.post('/verify', async (req, res) => {
+  const { fileHash, fileName } = req.body;
+
+  const ext = extractExt(fileName);
+  const filePath = path.resolve(UPLOAD_DIR, `${fileHash}${ext}`);
+
+  if (fse.existsSync(filePath)) {
+    res.json({
+      shouldUploadFile: false,
+    });
+  } else {
+    res.json({
+      shouldUploadFile: true,
+      uploadedChunks: await createUploadedList(fileHash),
+    });
   }
-}
+});
+
+// 合并文件分片
+app.post('/merge', async (req, res) => {
+  const { fileHash, fileName, chunkSize } = req.body;
+  const ext = extractExt(fileName);
+  const targetFilePath = path.resolve(UPLOAD_DIR, `${fileName}`);
+  await mergeFileChunks(targetFilePath, fileHash, chunkSize);
+
+  res.json({
+    code: 0,
+    msg: `file ${fileName} merged.`,
+  });
+});
+
+// 上传文件分片
+app.post('/kk', (req, res) => {
+  const multipart = new multiparty.Form();
+  console.log('我进来了')
+
+  multipart.parse(req, async (err, fields, files) => {
+    if (err) {
+      return;
+    }
+    const [chunk] = files.chunk;
+    const [hash] = fields.hash;
+    const [fileHash] = fields.fileHash;
+    const chunkDir = path.resolve(UPLOAD_DIR, fileHash);
+
+    if (!fse.existsSync(chunkDir)) {
+      await fse.mkdirs(chunkDir);
+    }
+
+    await fse.move(chunk.path, `${chunkDir}/${hash}`, { overwrite: true });
+    res.status(200).send('received file chunk');
+  });
+});
+
+
 
 //TODO:怎么经常去更新这个元素在新arr里的位置？这里的bug因为上面的i就是固定的了，不会因为arr减少而减少
 function TEST_getTitleAndLink(targetText) {
@@ -168,7 +270,7 @@ function getNotices() {
 }
 
 function getText(proName, callback) {
-  const filePath = `./public/test/${proName}.docx`;
+  const filePath = `./target/${proName}.docx`;
   const fs = require("fs");
   const AdmZip = require("adm-zip"); //引入查看zip文件的包
   const zip = new AdmZip(filePath); //filePath为文件路径
@@ -354,7 +456,7 @@ app.post('/public/download', function(req, res){
   console.log(req.params, req.body, req.data, req);
   try{
     const filename = `${req.body.proName}.docx`; // 获取要下载的文件名
-    const file = path.join(__dirname, '/public/test/' + filename)
+    const file = path.join(__dirname, '/target/' + filename)
     res.download(file, filename, function(err) {
       if (err) {
         console.error('文件下载失败：', err);
@@ -413,7 +515,7 @@ app.post("/mainStd/sign", (req, res, next) => {
   });
 });
 
-// ===============支持记录==================//
+// ===============文件上传==================//
 
 // 配置 multer
 const upload = multer({
@@ -427,6 +529,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   // 将二进制数据写入到数据库中
   res.send({ message: "File uploaded successfully" });
 });
+
 
 // ===============管理员端==================//
 
@@ -632,7 +735,7 @@ app.post("/myJudge/list", (req, res, next) => {
 
 //获取原文件
 app.post("/myJudge/filebackup", (req, res) => {
-  let pathName = "./public/test/" + req.params.proName;
+  let pathName = "./target/" + req.params.proName;
   console.log("pathName: ", pathName);
   fs.readdir(pathName, (err, file) => {
     console.log("获取文件", file);
@@ -648,7 +751,7 @@ app.post("/myJudge/filebackup", (req, res) => {
 app.post("/myJudge/file", (req, res) => {
   let { proName } = req.body;
   // let { proName } = req.params;
-  let filePath = "./public/test/" + proName + ".docx";
+  let filePath = "./target/" + proName + ".docx";
   console.log(filePath);
   // const filePath = path.join(__dirname, 'word', `${proName}.docx`);
   const file = fs.createReadStream(filePath);
