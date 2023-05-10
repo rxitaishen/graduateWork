@@ -319,17 +319,20 @@ app.delete("/userDelete/:_id", (req, res) => {
 // ===============共用接口==================//
 
 app.post("/public/initCompet", (req, res) => {
-  publicCompetion.create({...req.body}, (err, compet) => {
-    if (err) {
-      //console.log(err);
-      throw err;
-    }
-    if (compet) {
-      res.send("竞赛初始化成功")
-    } else {
-      res.send("竞赛初始化失败");
-    }
-  })
+  publicCompetion.deleteMany({}, function(err) {
+    console.log('集合已清空');
+    publicCompetion.create({...req.body}, (err, compet) => {
+      if (err) {
+        //console.log(err);
+        throw err;
+      }
+      if (compet) {
+        res.send("竞赛初始化成功")
+      } else {
+        res.send("竞赛初始化失败");
+      }
+    })
+  });
 });
 
 app.get("/public/getCompTime", (req, res) => {
@@ -339,11 +342,30 @@ app.get("/public/getCompTime", (req, res) => {
       throw err;
     }
     if (compet) {
-      res.send("报名成功")
+      res.send(compet[0])
     } else {
       res.send("报名失败");
     }
   })
+});
+
+// 文件下载
+app.post('/public/download', function(req, res){
+  console.log(req.params, req.body, req.data, req);
+  try{
+    const filename = `${req.body.proName}.docx`; // 获取要下载的文件名
+    const file = path.join(__dirname, '/public/test/' + filename)
+    res.download(file, filename, function(err) {
+      if (err) {
+        console.error('文件下载失败：', err);
+      } else {
+        console.log('文件下载成功');
+      }
+    });
+  } catch (e) {
+    console.error(e);
+  }
+  
 });
 
 
@@ -408,14 +430,19 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
 // ===============管理员端==================//
 
+
 // 报名表检索
 app.post("/admin/signPageList", (req, res, next) => {
   signpage.find((err, tm) => {
     if (err) {
       throw err;
     }
-    if (tm !== null) {
-      res.json(tm);
+    if (tm.length !== 0) {
+      console.log("RcArr不为null", tm);
+      res.json({
+        total: tm.length,
+        rows: tm,
+      });
     } else {
       console.log("proName为null");
       res.send("0");
@@ -439,8 +466,8 @@ app.post(`/admin/signPageDetail`, (req, res) => {
   });
 });
 
-// 更新报名表（通过、分配专家、智能审核）
-app.post("/myGroup/check", (req, res, next) => {
+// 审核报名表
+app.post("/admin/checkSignPage", (req, res, next) => {
   let t = req.body._id;
   signpage.findOne({ _id: t }, (err, tm) => {
     if (err) {
@@ -744,6 +771,47 @@ app.post("/myGroup/update", (req, res, next) => {
     }
   });
 });
+
+// ===============分数记录==================//
+
+// 所有分数
+
+app.post("/myScore/list", (req, res, next) => {
+  project.find({passOrNot: 1}, (err, RcArr) => {
+    console.log(RcArr);
+    if (err) {
+      throw err;
+    }
+    if (RcArr.length !== 0) {
+      //findone 和find 返回值有区别，当找不到时 find返回空数组，findone返回null
+      console.log("RcArr不为null", RcArr);
+      res.json({
+        total: RcArr.length,
+        rows: RcArr,
+      });
+    } else {
+      console.log("RcArr为null");
+      res.send("未找到相关信息");
+    }
+  });
+});
+
+// 成员详情
+app.post(`/myScore/detail`, (req, res) => {
+  var t = req.body;
+  project.findOne({ stdNumber: t.stdNumber }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send("0");
+    }
+  });
+});
+
 
 app.listen(5000);
 console.log("Running on port 5000...");

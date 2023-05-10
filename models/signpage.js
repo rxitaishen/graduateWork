@@ -18,7 +18,7 @@ const signPageSchema = mongoose.Schema({
         type: String,
     },
     "proProcess":{
-        type: Number,
+        type: String,
     },
     // 0代表还没审核, 1代表审核通过，2代表没过
     "passOrNot":{
