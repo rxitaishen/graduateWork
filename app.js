@@ -7,9 +7,9 @@ const fs = require("fs");
 const mineType = require("mime-types");
 const { exec } = require("child_process");
 const multer = require("multer");
-const fse = require('fs-extra');
-const multiparty = require('multiparty');
-const bodyParser = require('body-parser');
+const fse = require("fs-extra");
+const multiparty = require("multiparty");
+const bodyParser = require("body-parser");
 
 var iconv = require("iconv-lite");
 var encoding = "cp936";
@@ -26,13 +26,13 @@ admin = require("./models/adminUser");
 signpage = require("./models/signpage");
 
 const app = express();
-const UPLOAD_DIR = path.resolve(__dirname, '.', 'target');
+const UPLOAD_DIR = path.resolve(__dirname, ".", "target");
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 const extractExt = (filename) =>
-  filename.slice(filename.lastIndexOf('.'), filename.length);
+  filename.slice(filename.lastIndexOf("."), filename.length);
 
 const createUploadedList = async (fileHash) => {
   const fileDir = path.resolve(UPLOAD_DIR, fileHash);
@@ -42,7 +42,7 @@ const createUploadedList = async (fileHash) => {
 const pipeStream = (chunkPath, writeStream) => {
   return new Promise((resolve) => {
     const chunkReadStream = fse.createReadStream(chunkPath);
-    chunkReadStream.on('end', () => {
+    chunkReadStream.on("end", () => {
       fse.unlinkSync(chunkPath);
       resolve();
     });
@@ -54,10 +54,10 @@ const mergeFileChunks = async (targetFilePath, fileHash, chunkSize) => {
   const chunkDir = path.resolve(UPLOAD_DIR, fileHash);
   const chunkNames = await fse.readdir(chunkDir);
   // 根据分片下表排序
-  chunkNames.sort((a, b) => a.split('_')[1] - b.split('_')[1]);
-  console.log(targetFilePath)
+  chunkNames.sort((a, b) => a.split("_")[1] - b.split("_")[1]);
+  console.log(targetFilePath);
 
-  await fse.writeFileSync(targetFilePath, '');
+  await fse.writeFileSync(targetFilePath, "");
 
   await Promise.all(
     chunkNames.map((chunkName, index) => {
@@ -76,8 +76,8 @@ const mergeFileChunks = async (targetFilePath, fileHash, chunkSize) => {
 
 // 处理跨域
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
   next();
 });
 
@@ -85,7 +85,7 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 
 // 验证文件是否已上传过
-app.post('/verify', async (req, res) => {
+app.post("/verify", async (req, res) => {
   const { fileHash, fileName } = req.body;
 
   const ext = extractExt(fileName);
@@ -104,12 +104,12 @@ app.post('/verify', async (req, res) => {
 });
 
 // 合并文件分片
-app.post('/merge', async (req, res) => {
+app.post("/merge", async (req, res) => {
   const { fileHash, fileName, chunkSize } = req.body;
   const ext = extractExt(fileName);
   const targetFilePath = path.resolve(UPLOAD_DIR, `${fileName}`);
   await mergeFileChunks(targetFilePath, fileHash, chunkSize);
-
+ 
   res.json({
     code: 0,
     msg: `file ${fileName} merged.`,
@@ -117,9 +117,9 @@ app.post('/merge', async (req, res) => {
 });
 
 // 上传文件分片
-app.post('/kk', (req, res) => {
+app.post("/kk", (req, res) => {
   const multipart = new multiparty.Form();
-  console.log('我进来了')
+  console.log("我进来了");
 
   multipart.parse(req, async (err, fields, files) => {
     if (err) {
@@ -135,11 +135,41 @@ app.post('/kk', (req, res) => {
     }
 
     await fse.move(chunk.path, `${chunkDir}/${hash}`, { overwrite: true });
-    res.status(200).send('received file chunk');
+    res.status(200).send("received file chunk");
   });
 });
 
+app.post('/mainStd/newproject', function(req, res){
+  const params = {
+    ...req.body,
+  }
+  project.create(params, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      res.send("作品提交成功");
+    } else {
+      console.log("proName为null");
+      res.send("0");
+    }
+  });
+})
 
+app.post('/admin/signPageDetailByCallNumber', function(req, res){
+  var t = req.body;
+  signpage.findOne({ callNumber: t.callNumber }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send("0");
+    }
+  });
+})
 
 //TODO:怎么经常去更新这个元素在新arr里的位置？这里的bug因为上面的i就是固定的了，不会因为arr减少而减少
 function TEST_getTitleAndLink(targetText) {
@@ -283,6 +313,7 @@ function getText(proName, callback) {
 }
 
 function baiduAI(proName) {
+  console.log(proName);
   return new Promise((resolve, reject) => {
     getText(proName, (text) => {
       getContentCheckResult(text)
@@ -421,19 +452,19 @@ app.delete("/userDelete/:_id", (req, res) => {
 // ===============共用接口==================//
 
 app.post("/public/initCompet", (req, res) => {
-  publicCompetion.deleteMany({}, function(err) {
-    console.log('集合已清空');
-    publicCompetion.create({...req.body}, (err, compet) => {
+  publicCompetion.deleteMany({}, function (err) {
+    console.log("集合已清空");
+    publicCompetion.create({ ...req.body }, (err, compet) => {
       if (err) {
         //console.log(err);
         throw err;
       }
       if (compet) {
-        res.send("竞赛初始化成功")
+        res.send("竞赛初始化成功");
       } else {
         res.send("竞赛初始化失败");
       }
-    })
+    });
   });
 });
 
@@ -444,32 +475,31 @@ app.get("/public/getCompTime", (req, res) => {
       throw err;
     }
     if (compet) {
-      res.send(compet[0])
+      res.send(compet[0]);
     } else {
       res.send("报名失败");
     }
-  })
+  });
 });
 
 // 文件下载
-app.post('/public/download', function(req, res){
+app.post("/public/download", function (req, res) {
   console.log(req.params, req.body, req.data, req);
-  try{
+  try {
     const filename = `${req.body.proName}.docx`; // 获取要下载的文件名
-    const file = path.join(__dirname, '/target/' + filename)
-    res.download(file, filename, function(err) {
+    const file = path.join(__dirname, "/target/" + filename);
+    res.download(file, filename, function (err) {
       if (err) {
-        console.error('文件下载失败：', err);
+        console.error("文件下载失败：", err);
+        res.send("找不到文件")
       } else {
-        console.log('文件下载成功');
+        console.log("文件下载成功");
       }
     });
   } catch (e) {
     console.error(e);
   }
-  
 });
-
 
 // ===============学生端 主缆===============//
 app.get("/mainStd/notice", (req, res) => {
@@ -500,7 +530,7 @@ app.post("/mainStd/member", (req, res, next) => {
 
 //填写报名表
 app.post("/mainStd/sign", (req, res, next) => {
-  signpage.create({...req.body}, (err, user) => {
+  signpage.create({ ...req.body }, (err, user) => {
     if (err) {
       //console.log(err);
       throw err;
@@ -530,9 +560,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   res.send({ message: "File uploaded successfully" });
 });
 
-
 // ===============管理员端==================//
-
 
 // 报名表检索
 app.post("/admin/signPageList", (req, res, next) => {
@@ -604,7 +632,10 @@ app.post("/admin/list", (req, res, next) => {
       throw err;
     }
     if (tm !== null) {
-      res.json(tm);
+      res.json({
+        total: tm.length,
+        rows: tm,
+      });
     } else {
       console.log("proName为null");
       res.send("0");
@@ -629,16 +660,17 @@ app.post("/admin/update", (req, res, next) => {
         // TODO: 审核退回，防止下次提交的时候重名，其实也可以让上交的时候覆盖文件
         if (req.body.passOrNot == 2) {
           let query = { _id: req.body._id };
-          project.deleteOne(query, (err, project) => {
-            if (err) {
-              throw err;
-            }
-            if (project !== null) {
-              console.log("审核退回，删除对应文件");
-            } else {
-              console.log("找不到对应文件");
-            }
-          });
+          res.send("审核退回，删除对应文件");
+          // project.deleteOne(query, (err, project) => {
+          //   if (err) {
+          //     throw err;
+          //   }
+          //   if (project !== null) {
+          //     res.send("审核退回，删除对应文件");
+          //   } else {
+          //     console.log("找不到对应文件");
+          //   }
+          // });
         } else {
           /**更新数据成功，紧接着查询数据 */
           project.findOne({ _id: t }, (err, t) => {
@@ -678,30 +710,36 @@ app.post("/admin/getTeacher", (req, res, next) => {
 app.post("/admin/auditByAi", (req, res, next) => {
   baiduAI(req.body.proName)
     .then((result) => {
+      result = eval ("(" + result + ")");
+      console.log(result, typeof result)
+
+      // res.json(result.data);
+
       if (result !== null) {
         // res.send("1");
-        let t = req.body._id;
-        project.findOne({ _id: t }, (err, tm) => {
+        let t = req.body.proName;
+        project.findOne({ proName: t }, (err, tm) => {
           if (err) {
             throw err;
           }
           if (tm !== null) {
-            const resText = result.data.conclusion + ":" + result.data.msg;
+            const resText = result.data[0].conclusion + ":" + result.data[0].msg;
             const params = {
               aiScore: resText,
             };
-            project.updateOne({ _id: t }, params, (err, docs) => {
+            project.updateOne({ proName: t }, params, (err, docs) => {
               if (err) {
                 res.send("0");
               }
               /**更新数据成功，紧接着查询数据 */
-              project.findOne({ _id: t }, (err, t) => {
-                if (err) {
-                  res.send("0");
-                }
-                // 发送的是结果+msg
-                res.json(resText);
-              });
+              res.send("审核完成")
+              // project.findOne({ proName: t }, (err, t) => {
+              //   if (err) {
+              //     res.send("0");
+              //   }
+              //   // 发送的是结果+msg
+              //   res.send(resText);
+              // });
             });
           } else {
             console.log("proName为null");
@@ -720,7 +758,31 @@ app.post("/admin/auditByAi", (req, res, next) => {
 
 // ===============教师评审==================//
 app.post("/myJudge/list", (req, res, next) => {
-  project.find({ auditTeachers: { $in: [req.body.workId] } }, (err, tm) => {
+  let num = Number(req.body.workId)
+  console.log("Number", num)
+  project.find({
+    auditTeachers: num
+  }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm.length) {
+      console.log("proName不为null");
+      res.json({
+        total: tm.length,
+        rows: tm,
+      });
+    } else {
+      console.log("nnproName为null");
+      res.send("0");
+    }
+  });
+});
+
+// 成员详情
+app.post(`/myJudge/detail`, (req, res) => {
+  var t = req.body;
+  project.findOne({ stdNumber: t.stdNumber }, (err, tm) => {
     if (err) {
       throw err;
     }
@@ -730,44 +792,6 @@ app.post("/myJudge/list", (req, res, next) => {
       console.log("proName为null");
       res.send("0");
     }
-  });
-});
-
-//获取原文件
-app.post("/myJudge/filebackup", (req, res) => {
-  let pathName = "./target/" + req.params.proName;
-  console.log("pathName: ", pathName);
-  fs.readdir(pathName, (err, file) => {
-    console.log("获取文件", file);
-    if (file !== undefined) {
-      res.send(file);
-    } else {
-      res.send("未找到对应封面");
-    }
-    //前台就给封面设置一个state变量好了，然后监听这个state变量
-  });
-});
-
-app.post("/myJudge/file", (req, res) => {
-  let { proName } = req.body;
-  // let { proName } = req.params;
-  let filePath = "./target/" + proName + ".docx";
-  console.log(filePath);
-  // const filePath = path.join(__dirname, 'word', `${proName}.docx`);
-  const file = fs.createReadStream(filePath);
-  file.on("open", () => {
-    // 设置响应头，告诉浏览器返回的是 Word 文件类型，从而触发文件下载操作。
-    proName = encodeURIComponent(proName); // 对文件名进行编码
-    res.set(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    );
-    res.set("Content-Disposition", `attachment; filename=${proName}.docx`);
-    file.pipe(res);
-  });
-  file.on("error", (err) => {
-    console.log(err);
-    res.status(500).send("Internal Server Error");
   });
 });
 
@@ -880,7 +904,7 @@ app.post("/myGroup/update", (req, res, next) => {
 // 所有分数
 
 app.post("/myScore/list", (req, res, next) => {
-  project.find({passOrNot: 1}, (err, RcArr) => {
+  project.find({ passOrNot: 1 }, (err, RcArr) => {
     console.log(RcArr);
     if (err) {
       throw err;
@@ -914,7 +938,6 @@ app.post(`/myScore/detail`, (req, res) => {
     }
   });
 });
-
 
 app.listen(5000);
 console.log("Running on port 5000...");

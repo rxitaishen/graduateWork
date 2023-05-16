@@ -31,18 +31,6 @@ Edecoded_text = Etext.decode('utf-8')
 Ctext = Cresponse.content
 Cdecoded_text = Ctext.decode('utf-8')
 
-
-#print(Edecoded_text)
-
-# 打开文件，如该文件不存在则会创建它
-#file = open("./output.txt", "w", encoding='utf-8')
-
-# 将字符串写入文件
-#file.write(Edecoded_text)
-
-# 关闭文件
-#file.close()
-
 #==============================#
 
 from bs4 import BeautifulSoup
