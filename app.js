@@ -109,7 +109,7 @@ app.post("/merge", async (req, res) => {
   const ext = extractExt(fileName);
   const targetFilePath = path.resolve(UPLOAD_DIR, `${fileName}`);
   await mergeFileChunks(targetFilePath, fileHash, chunkSize);
- 
+
   res.json({
     code: 0,
     msg: `file ${fileName} merged.`,
@@ -139,10 +139,10 @@ app.post("/kk", (req, res) => {
   });
 });
 
-app.post('/mainStd/newproject', function(req, res){
+app.post("/mainStd/newproject", function (req, res) {
   const params = {
     ...req.body,
-  }
+  };
   project.create(params, (err, tm) => {
     if (err) {
       throw err;
@@ -154,9 +154,9 @@ app.post('/mainStd/newproject', function(req, res){
       res.send("0");
     }
   });
-})
+});
 
-app.post('/admin/signPageDetailByCallNumber', function(req, res){
+app.post("/admin/signPageDetailByCallNumber", function (req, res) {
   var t = req.body;
   signpage.findOne({ callNumber: t.callNumber }, (err, tm) => {
     if (err) {
@@ -169,7 +169,7 @@ app.post('/admin/signPageDetailByCallNumber', function(req, res){
       res.send("0");
     }
   });
-})
+});
 
 //TODO:怎么经常去更新这个元素在新arr里的位置？这里的bug因为上面的i就是固定的了，不会因为arr减少而减少
 function TEST_getTitleAndLink(targetText) {
@@ -491,7 +491,7 @@ app.post("/public/download", function (req, res) {
     res.download(file, filename, function (err) {
       if (err) {
         console.error("文件下载失败：", err);
-        res.send("找不到文件")
+        res.send("找不到文件");
       } else {
         console.log("文件下载成功");
       }
@@ -499,6 +499,39 @@ app.post("/public/download", function (req, res) {
   } catch (e) {
     console.error(e);
   }
+});
+
+// 查找一个项目
+app.post("/public/findProject", function (req, res) {
+  console.log(req.params, req.body, req.data, req);
+
+  project.findOne({ stdNumber: t.stdNumber }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send("0");
+    }
+  });
+});
+
+// 查找一个项目
+app.post("/public/findsignPage", function (req, res) {
+  var t = req.body;
+  signpage.findOne({ callNumber: t.callNumber }, (err, tm) => {
+    if (err) {
+      throw err;
+    }
+    if (tm !== null) {
+      res.json(tm);
+    } else {
+      console.log("proName为null");
+      res.send("0");
+    }
+  });
 });
 
 // ===============学生端 主缆===============//
@@ -710,8 +743,8 @@ app.post("/admin/getTeacher", (req, res, next) => {
 app.post("/admin/auditByAi", (req, res, next) => {
   baiduAI(req.body.proName)
     .then((result) => {
-      result = eval ("(" + result + ")");
-      console.log(result, typeof result)
+      result = eval("(" + result + ")");
+      console.log(result, typeof result);
 
       // res.json(result.data);
 
@@ -723,7 +756,8 @@ app.post("/admin/auditByAi", (req, res, next) => {
             throw err;
           }
           if (tm !== null) {
-            const resText = result.data[0].conclusion + ":" + result.data[0].msg;
+            const resText =
+              result.data[0].conclusion + ":" + result.data[0].msg;
             const params = {
               aiScore: resText,
             };
@@ -732,7 +766,7 @@ app.post("/admin/auditByAi", (req, res, next) => {
                 res.send("0");
               }
               /**更新数据成功，紧接着查询数据 */
-              res.send("审核完成")
+              res.send("审核完成");
               // project.findOne({ proName: t }, (err, t) => {
               //   if (err) {
               //     res.send("0");
@@ -756,27 +790,55 @@ app.post("/admin/auditByAi", (req, res, next) => {
     });
 });
 
+// 一键结算
+app.post("/admin/score", (req, res, next) => {
+  project.find({}, function (err, pro) {
+    if (err) {
+      console.log(err);
+      res.send("结算失败");
+      return;
+    }
+
+    pro.forEach(function (pro) {
+      pro.auditScore = Math.floor(pro.auditScore / pro.auditTeachers.length);
+      const { auditScore } = pro;
+      if (auditScore >= 100) {
+        pro.prize = "一等奖";
+      } else if (auditScore > 50) {
+        pro.prize = "二等奖";
+      } else {
+        pro.prize = "三等奖";
+      }
+      pro.save();
+      res.send("结算完成");
+    });
+  });
+});
+
 // ===============教师评审==================//
 app.post("/myJudge/list", (req, res, next) => {
-  let num = Number(req.body.workId)
-  console.log("Number", num)
-  project.find({
-    auditTeachers: num
-  }, (err, tm) => {
-    if (err) {
-      throw err;
+  let num = Number(req.body.workId);
+  console.log("Number", num);
+  project.find(
+    {
+      auditTeachers: num,
+    },
+    (err, tm) => {
+      if (err) {
+        throw err;
+      }
+      if (tm.length) {
+        console.log("proName不为null");
+        res.json({
+          total: tm.length,
+          rows: tm,
+        });
+      } else {
+        console.log("nnproName为null");
+        res.send("0");
+      }
     }
-    if (tm.length) {
-      console.log("proName不为null");
-      res.json({
-        total: tm.length,
-        rows: tm,
-      });
-    } else {
-      console.log("nnproName为null");
-      res.send("0");
-    }
-  });
+  );
 });
 
 // 成员详情
