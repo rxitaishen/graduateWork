@@ -119,7 +119,6 @@ app.post("/merge", async (req, res) => {
 // 上传文件分片
 app.post("/kk", (req, res) => {
   const multipart = new multiparty.Form();
-  console.log("我进来了");
 
   multipart.parse(req, async (err, fields, files) => {
     if (err) {
