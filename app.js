@@ -298,6 +298,32 @@ function getNotices() {
   return myAsyncFunction();
 }
 
+function merageDfa(t) {
+  // 在Node.js中执行Python脚本
+  let rest = t;
+  // let cmd = 'pip install requests --user && pip install bs4 --user && python ./public/爬取通知.py '
+  let cmd = "python ./public/Dfa.py ";
+
+  function myAsyncFunction() {
+    return new Promise(function (resolve, reject) {
+      exec(cmd, { encoding: binaryEncoding }, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`执行Python脚本时出错： ${error}`);
+          console.error(
+            iconv.decode(Buffer.from(stderr, binaryEncoding), encoding)
+          );
+          reject(error);
+        }
+        // 打印输出
+        const res = iconv.decode(Buffer.from(stdout, binaryEncoding), encoding);
+        resolve(res);
+      });
+    });
+  }
+  myAsyncFunction();
+  return rest;
+}
+
 function getText(proName, callback) {
   const filePath = `./target/${proName}.docx`;
   const fs = require("fs");
@@ -312,12 +338,12 @@ function getText(proName, callback) {
 }
 
 function baiduAI(proName) {
-  console.log(proName);
   return new Promise((resolve, reject) => {
     getText(proName, (text) => {
       getContentCheckResult(text)
         .then((result) => {
-          resolve(result);
+          res = merageDfa(result)
+          resolve(res);
         })
         .catch((err) => {
           reject(err);
