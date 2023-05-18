@@ -746,42 +746,42 @@ app.post("/admin/auditByAi", (req, res, next) => {
       console.log(result, typeof result);
 
       // res.json(result.data);
-
-      if (result !== null) {
-        // res.send("1");
-        let t = req.body.proName;
-        project.findOne({ proName: t }, (err, tm) => {
-          if (err) {
-            throw err;
-          }
-          if (tm !== null) {
-            const resText =
-              result.data[0].conclusion + ":" + result.data[0].msg;
-            const params = {
-              aiScore: resText,
-            };
-            project.updateOne({ proName: t }, params, (err, docs) => {
-              if (err) {
-                res.send("0");
-              }
-              /**更新数据成功，紧接着查询数据 */
-              res.send("审核完成");
-              // project.findOne({ proName: t }, (err, t) => {
-              //   if (err) {
-              //     res.send("0");
-              //   }
-              //   // 发送的是结果+msg
-              //   res.send(resText);
-              // });
-            });
-          } else {
-            console.log("proName为null");
-            res.send("0");
-          }
-        });
-      } else {
-        console.log("proName为null");
-        res.send("0");
+      if(result.error_msg){
+        console.log('文本过长')
+        res.send("审核失败");
+      }else{
+         // res.send("1");
+         let t = req.body.proName;
+         project.findOne({ proName: t }, (err, tm) => {
+           if (err) {
+             throw err;
+           }
+           if (tm !== null) {
+             // if
+             const resText =
+               result.data[0].conclusion + ":" + result.data[0].msg;
+             const params = {
+               aiScore: resText,
+             };
+             project.updateOne({ proName: t }, params, (err, docs) => {
+               if (err) {
+                 res.send("0");
+               }
+               /**更新数据成功，紧接着查询数据 */
+               res.send("审核完成");
+               // project.findOne({ proName: t }, (err, t) => {
+               //   if (err) {
+               //     res.send("0");
+               //   }
+               //   // 发送的是结果+msg
+               //   res.send(resText);
+               // });
+             });
+           } else {
+             console.log("proName为null");
+             res.send("0");
+           }
+         });
       }
     })
     .catch((err) => {
@@ -797,20 +797,31 @@ app.post("/admin/score", (req, res, next) => {
       res.send("结算失败");
       return;
     }
-
-    pro.forEach(function (pro) {
-      pro.auditScore = Math.floor(pro.auditScore / pro.auditTeachers.length);
-      const { auditScore } = pro;
-      if (auditScore >= 100) {
-        pro.prize = "一等奖";
-      } else if (auditScore > 50) {
-        pro.prize = "二等奖";
-      } else {
-        pro.prize = "三等奖";
-      }
-      pro.save();
+    try {
+      pro.forEach(function (pro) {
+        if(!pro.auditScore){
+          throw new Error("结算失败，老师未完成评审");
+        }
+        pro.auditScore = Math.floor(pro.auditScore / pro.auditTeachers.length);
+        console.log(pro.auditScore)
+        const { auditScore } = pro;
+        if (auditScore >= 100) {
+          pro.prize = "一等奖";
+        } else if (auditScore > 50) {
+          pro.prize = "二等奖";
+        } else {
+          pro.prize = "三等奖";
+        }
+        pro.save();
+        
+      });
       res.send("结算完成");
-    });
+    } catch (e) {
+      if (e.message !== 'StopIteration') {
+        res.send("结算失败");
+      }
+    }
+    
   });
 });
 
